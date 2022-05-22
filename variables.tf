@@ -1,9 +1,16 @@
 variable "aws_region" {
   description = "The region to deploy Rubrik Cloud Cluster nodes."
+  default     = "us-east-1"
 }
-variable "aws_instance_type" {
-  description = "The type of instance to use as Rubrik Cloud Cluster nodes."
-  default     = "m5.4xlarge"
+
+variable "rubrik_instance_type" {
+  description = "The type of instance to use as Rubrik Cloud Cluster ES nodes."
+  default     = "m5.4xlarge" # m5.4xlarge this is the only supported Rubrik CC ES instance type
+}
+
+variable "rubrik_ami_id" {
+  description = "AWS Marketplace ami id"
+  default     = "ami-0095fefc7754e019c" #  rubrik-cdm-7.0.1-p4-15453
 }
 
 variable "aws_disable_api_termination" {
@@ -11,70 +18,35 @@ variable "aws_disable_api_termination" {
   default     = true
 }
 
-variable "aws_vpc_security_group_name_cloud_cluster_nodes" {
-  description = "The name of the security group to create for Rubrik Cloud Cluster to use."
-  default     = "Rubrik Cloud Cluster"
+variable "security_group_name_rubrik_cc_instances" {
+  description = "The name of the security group to create for Rubrik Cloud Cluster intra-node communication to use."
+  default     = "rubrik-cc-intra-node-securitygroup"
 }
 
-variable "aws_vpc_security_group_name_cloud_cluster_hosts" {
-  description = "The name of the security group to create for Rubrik Cloud Cluster to communicate with EC2 instances."
-  default     = "Rubrik Cloud Cluster Hosts"
+variable "security_group_id_inbound_ssh_https_mgmt" {
+  description = "The id of the security group to allow inbound port 22/443 access from to Rubrik Cloud Cluster CLI"
+}
+
+variable "security_group_name_workloads" {
+  description = "The name of the security group to create for Rubrik Cloud Cluster to communicate with EC2 workload instances."
+  default     = "rubrik-cc-workload-securitygroup"
 }
 
 variable "aws_subnet_id" {
-  description = "The VPC Subnet ID to launch Rubrik Cloud Cluster in."
+  description = "The VPC Subnet ID with route table s3 endpoint entry to launch Rubrik Cloud Cluster in."
 }
 
-variable "aws_public_key" {
-  description = "The public key material needed to create an AWS key pair for use with Rubrik Cloud Cluster."
+variable "aws_prefix" {
+  description = "prefix to add to tf created resources"
+  default     = "tf-rubrik-cc-"
+}
+
+variable "aws_public_key_name" {
+  description = "The name of an existing OPENSSH formatted AWS key for use with Rubrik Cloud Cluster."
   sensitive   = true
 }
 
 variable "number_of_nodes" {
-  description = "The total number of nodes in Rubrik Cloud Cluster."
-  default     = 4
-}
-
-variable "cluster_disk_type" {
-  description = "The disk type to use for Rubrik Cloud Cluster data disks (sc1 or st1). NOTE: st1 disks require six 8TB disks."
-  default     = "st1"
-}
-
-variable "cluster_disk_size" {
-  description = "The size of each the three data disks in each node."
-  default     = "1024"
-}
-
-variable "cluster_name" {
-  description = "Unique name to assign to the Rubrik Cloud Cluster. This will also be used to populate the EC2 instance name tag. For example, rubrik-cloud-cluster-1, rubrik-cloud-cluster-2 etc."
-  default     = "rubrik-cloud-cluster"
-}
-
-variable "admin_email" {
-  description = "The Rubrik Cloud Cluster sends messages for the admin account to this email address."
-}
-
-variable admin_password {
-  description = "Password for the Rubrik Cloud Cluster admin account."
-  default     = "RubrikGoForward"
-}
-
-variable "dns_search_domain" {
-  type        = list
-  description = "List of search domains that the DNS Service will use to resolve hostnames that are not fully qualified."
-}
-
-variable "dns_name_servers" {
-  type        = list
-  description = "List of the IPv4 addresses of the DNS servers."
-}
-
-variable "ntp_servers" {
-  description = "List of FQDN or IPv4 addresses of a network time protocol (NTP) server(s)"
-  default     = ["169.254.169.123"]
-}
-
-variable "timeout" {
-  description = "The number of seconds to wait to establish a connection the Rubrik cluster before returning a timeout error."
-  default     = 15
+  description = "The total number of nodes in Rubrik Cloud Cluster ES."
+  default     = 3
 }

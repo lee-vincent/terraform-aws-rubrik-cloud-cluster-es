@@ -6,39 +6,22 @@ provider "aws" {
 # Dynamic Variable Creation #
 #############################
 resource "null_resource" "create_cluster_node_name" {
-  count = "${var.number_of_nodes}"
+  count = var.number_of_nodes
 
   triggers = {
-    node_number = "${count.index + 1}"
+    node_number = count.index + 1
   }
 }
 
 locals {
-  cluster_node_name = "${formatlist("${var.cluster_name}-%s", null_resource.create_cluster_node_name.*.triggers.node_number)}"
+  cluster_node_name = formatlist("${var.aws_prefix}%s-%s", var.aws_region, null_resource.create_cluster_node_name.*.triggers.node_number)
 
-  cluster_node_ips = "${aws_instance.rubrik_cluster.*.private_ip}"
+  cluster_node_ips = aws_instance.rubrik_cluster.*.private_ip
 }
+
 
 data "aws_subnet" "rubrik_cloud_cluster" {
-  id = "${var.aws_subnet_id}"
-}
-
-data "aws_ami_ids" "rubrik_cloud_cluster" {
-  owners = ["679593333241"] 
-
-  filter {
-    name   = "name"
-    values = ["rubrik-mp-cc-*"]
-  }
-}
-
-##############################
-# SSH KEY PAIR FOR INSTANCES #
-##############################
-
-resource "aws_key_pair" "rubrik_cloud_cluster" {
-  key_name   = "${var.cluster_name}-key-pair"
-  public_key = "${var.aws_public_key}"
+  id = var.aws_subnet_id
 }
 
 #########################################
@@ -46,16 +29,16 @@ resource "aws_key_pair" "rubrik_cloud_cluster" {
 #########################################
 
 resource "aws_security_group" "rubrik_cloud_cluster" {
-  name        = "${var.aws_vpc_security_group_name_cloud_cluster_nodes}"
-  description = "Allow hosts to talk to Rubrik Cloud Cluster"
-  vpc_id      = "${data.aws_subnet.rubrik_cloud_cluster.vpc_id}"
+  name        = var.security_group_name_rubrik_cc_instances
+  description = "Allow Rubrik Cloud Cluster intra-node communication"
+  vpc_id      = data.aws_subnet.rubrik_cloud_cluster.vpc_id
 
   ingress {
-    description      = "Intra cluster communication"
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    self             = true
+    description = "Intra cluster communication"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    self        = true
   }
 
   egress {
@@ -67,38 +50,38 @@ resource "aws_security_group" "rubrik_cloud_cluster" {
   }
 }
 
-resource "aws_security_group" "rubrik_hosts" {
-  name        = "${var.aws_vpc_security_group_name_cloud_cluster_hosts}"
-  description = "Allow Rubrik Cloud Cluster to communicate with hosts"
-  vpc_id      = "${data.aws_subnet.rubrik_cloud_cluster.vpc_id}"
+resource "aws_security_group" "workload_instances" {
+  name        = var.security_group_name_workloads
+  description = "Allow Rubrik Cloud Cluster to communicate with workload instances"
+  vpc_id      = data.aws_subnet.rubrik_cloud_cluster.vpc_id
 
   ingress {
-    description      = "Ports for Rubrik Backup Service (RBS)"
-    from_port        = 12800
-    to_port          = 12801
-    protocol         = "tcp"
-    security_groups  = ["${aws_security_group.rubrik_cloud_cluster.id}"]
+    description     = "Ports for Rubrik Backup Service (RBS)"
+    from_port       = 12800
+    to_port         = 12801
+    protocol        = "tcp"
+    security_groups = ["${aws_security_group.rubrik_cloud_cluster.id}"]
   }
 }
 
-resource "aws_security_group_rule" "rubrik_cloud_cluster_cli_admin" {
-  type              = "ingress"
-  description       = "CLI administration of the nodes"
-  from_port         = 22
-  to_port           = 22
-  protocol          = "tcp"
-  security_group_id = "${aws_security_group.rubrik_cloud_cluster.id}"
-  source_security_group_id = "${aws_security_group.rubrik_hosts.id}"
+resource "aws_security_group_rule" "rubrik_cloud_cluster_ssh" {
+  type                     = "ingress"
+  description              = "SSH"
+  from_port                = 22
+  to_port                  = 22
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.rubrik_cloud_cluster.id
+  source_security_group_id = var.security_group_id_inbound_ssh_https_mgmt
 }
 
 resource "aws_security_group_rule" "rubrik_cloud_cluster_web_admin" {
-  type              = "ingress"
-  description       = "Web administration of the nodes"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "tcp"
-  security_group_id = "${aws_security_group.rubrik_cloud_cluster.id}"
-  source_security_group_id = "${aws_security_group.rubrik_hosts.id}"
+  type                     = "ingress"
+  description              = "Web administration of the nodes"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.rubrik_cloud_cluster.id
+  source_security_group_id = var.security_group_id_inbound_ssh_https_mgmt
 }
 
 ###############################
@@ -106,62 +89,105 @@ resource "aws_security_group_rule" "rubrik_cloud_cluster_web_admin" {
 ###############################
 
 resource "aws_instance" "rubrik_cluster" {
-  count                  = "${var.number_of_nodes}"
-  instance_type          = "${var.aws_instance_type}"
-  ami                    = "${element(data.aws_ami_ids.rubrik_cloud_cluster.ids, 0)}"
-  vpc_security_group_ids = ["${aws_security_group.rubrik_cloud_cluster.id}"]
-  subnet_id              = "${var.aws_subnet_id}"
-  key_name               = "${aws_key_pair.rubrik_cloud_cluster.key_name}"
-
+  count                  = var.number_of_nodes
+  instance_type          = var.rubrik_instance_type
+  ami                    = var.rubrik_ami_id
+  iam_instance_profile   = aws_iam_instance_profile.rubrik_ec2_profile.name
+  vpc_security_group_ids = [aws_security_group.rubrik_cloud_cluster.id]
+  subnet_id              = var.aws_subnet_id
+  key_name               = var.aws_public_key_name
+  source_dest_check      = false
   tags = {
-    Name = "${element(local.cluster_node_name, count.index)}"
+    Name = element(local.cluster_node_name, count.index)
   }
 
-  disable_api_termination = "${var.aws_disable_api_termination}"
+  disable_api_termination = var.aws_disable_api_termination
 
   root_block_device {
     encrypted = true
   }
-  
-  ebs_block_device {
-    device_name = "/dev/sdb"
-    volume_type = "${var.cluster_disk_type}"
-    volume_size = "${var.cluster_disk_size}"
-    encrypted   = true
-  }
 
   ebs_block_device {
-    device_name = "/dev/sdc"
-    volume_type = "${var.cluster_disk_type}"
-    volume_size = "${var.cluster_disk_size}"
-    encrypted   = true
+    device_name           = "/dev/sdb"
+    volume_type           = "gps"
+    volume_size           = "512"
+    delete_on_termination = true
+    encrypted             = true
+    tags = {
+      Name = format("%s%s%s", var.aws_prefix, var.aws_region, "-ebsvolume")
+    }
   }
+}
 
-  ebs_block_device {
-    device_name = "/dev/sdd"
-    volume_type = "${var.cluster_disk_type}"
-    volume_size = "${var.cluster_disk_size}"
-    encrypted   = true
-  }
+resource "aws_s3_bucket" "rubrik_cc_es" {
+  bucket_prefix = "rubrik-cc-es-"
 
-  ebs_block_device {
-    device_name = "/dev/sde"
-    volume_type = "${var.cluster_disk_type}"
-    volume_size = "${var.cluster_disk_size}"
-    encrypted   = true
+  lifecycle {
+    ignore_changes = [server_side_encryption_configuration]
   }
+  tags = {
+    Name = format("%s%s%s", var.aws_prefix, var.aws_region, "-bucket")
+  }
+}
 
-  ebs_block_device {
-    device_name = "/dev/sdf"
-    volume_type = "${var.cluster_disk_type}"
-    volume_size = "${var.cluster_disk_size}"
-    encrypted   = true
-  }
+resource "aws_s3_bucket_server_side_encryption_configuration" "s3_bucket_sse" {
+  bucket = aws_s3_bucket.rubrik_cc_es.bucket
 
-  ebs_block_device {
-    device_name = "/dev/sdg"
-    volume_type = "${var.cluster_disk_type}"
-    volume_size = "${var.cluster_disk_size}"
-    encrypted   = true
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "aws:kms"
+    }
   }
+}
+
+resource "aws_iam_role" "rubrik_role" {
+  name = format("%s%s%s", var.aws_prefix, var.aws_region, "-rubrik-s3-iamrole")
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+resource "aws_iam_role_policy" "rubrik_role_policy" {
+  name = format("%s%s%s", var.aws_prefix, var.aws_region, "-rubrik-iamrolepolicy")
+  role = aws_iam_role.rubrik_role.id
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Sid" : "VisualEditor0",
+        "Effect" : "Allow",
+        "Action" : [
+          "s3:AbortMultipartUpload",
+          "s3:DeleteObject*",
+          "s3:GetObject*",
+          "s3:ListMultipartUploadParts",
+          "s3:PutObject*"
+        ],
+        "Resource" : "${aws_s3_bucket.rubrik_cc_es.arn}/*"
+      },
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "s3:GetBucket*",
+          "s3:ListBucket*"
+        ],
+        "Resource" : "${aws_s3_bucket.rubrik_cc_es.arn}"
+      }
+    ],
+  })
+}
+
+resource "aws_iam_instance_profile" "rubrik_ec2_profile" {
+  name = "rubrik-ec2-iam-profile"
+  role = aws_iam_role.rubrik_role.name
 }
