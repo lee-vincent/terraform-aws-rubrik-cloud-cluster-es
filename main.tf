@@ -109,7 +109,7 @@ resource "aws_instance" "rubrik_cluster" {
 
   ebs_block_device {
     device_name           = "/dev/sdb"
-    volume_type           = "gps"
+    volume_type           = "gp2"
     volume_size           = "512"
     delete_on_termination = true
     encrypted             = true
