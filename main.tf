@@ -41,6 +41,20 @@ resource "aws_security_group" "rubrik_cloud_cluster" {
     self        = true
   }
 
+  ingress {
+    description     = "SSH"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = ["${var.security_group_id_inbound_ssh_https_mgmt}"]
+  }
+  ingress {
+    description     = "HTTPS"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = ["${var.security_group_id_inbound_ssh_https_mgmt}"]
+  }
   egress {
     from_port        = 0
     to_port          = 0
@@ -64,25 +78,6 @@ resource "aws_security_group" "workload_instances" {
   }
 }
 
-resource "aws_security_group_rule" "rubrik_cloud_cluster_ssh" {
-  type                     = "ingress"
-  description              = "SSH"
-  from_port                = 22
-  to_port                  = 22
-  protocol                 = "tcp"
-  security_group_id        = aws_security_group.rubrik_cloud_cluster.id
-  source_security_group_id = var.security_group_id_inbound_ssh_https_mgmt
-}
-
-resource "aws_security_group_rule" "rubrik_cloud_cluster_web_admin" {
-  type                     = "ingress"
-  description              = "Web administration of the nodes"
-  from_port                = 443
-  to_port                  = 443
-  protocol                 = "tcp"
-  security_group_id        = aws_security_group.rubrik_cloud_cluster.id
-  source_security_group_id = var.security_group_id_inbound_ssh_https_mgmt
-}
 
 ###############################
 # Create EC2 Instances in AWS #
