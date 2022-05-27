@@ -15,10 +15,8 @@ resource "null_resource" "create_cluster_node_name" {
 
 locals {
   cluster_node_name = formatlist("${var.aws_prefix}%s-%s", var.aws_region, null_resource.create_cluster_node_name.*.triggers.node_number)
-
   cluster_node_ips = aws_instance.rubrik_cluster.*.private_ip
 }
-
 
 data "aws_subnet" "rubrik_cloud_cluster" {
   id = var.aws_subnet_id
@@ -32,7 +30,6 @@ resource "aws_security_group" "rubrik_cloud_cluster" {
   name        = var.security_group_name_rubrik_cc_instances
   description = "Allow Rubrik Cloud Cluster intra-node communication"
   vpc_id      = data.aws_subnet.rubrik_cloud_cluster.vpc_id
-
   ingress {
     description = "Intra cluster communication"
     from_port   = 0
@@ -40,7 +37,6 @@ resource "aws_security_group" "rubrik_cloud_cluster" {
     protocol    = "-1"
     self        = true
   }
-
   ingress {
     description     = "SSH"
     from_port       = 22
@@ -68,7 +64,6 @@ resource "aws_security_group" "workload_instances" {
   name        = var.security_group_name_workloads
   description = "Allow Rubrik Cloud Cluster to communicate with workload instances"
   vpc_id      = data.aws_subnet.rubrik_cloud_cluster.vpc_id
-
   ingress {
     description     = "Ports for Rubrik Backup Service (RBS)"
     from_port       = 12800
@@ -77,7 +72,6 @@ resource "aws_security_group" "workload_instances" {
     security_groups = ["${aws_security_group.rubrik_cloud_cluster.id}"]
   }
 }
-
 
 ###############################
 # Create EC2 Instances in AWS #
@@ -95,13 +89,10 @@ resource "aws_instance" "rubrik_cluster" {
   tags = {
     Name = element(local.cluster_node_name, count.index)
   }
-
   disable_api_termination = var.aws_disable_api_termination
-
   root_block_device {
     encrypted = true
   }
-
   ebs_block_device {
     device_name           = "/dev/sdb"
     volume_type           = "gp2"
@@ -116,7 +107,6 @@ resource "aws_instance" "rubrik_cluster" {
 
 resource "aws_s3_bucket" "rubrik_cc_es" {
   bucket_prefix = "rubrik-cc-es-"
-
   lifecycle {
     ignore_changes = [server_side_encryption_configuration]
   }
@@ -127,7 +117,6 @@ resource "aws_s3_bucket" "rubrik_cc_es" {
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "s3_bucket_sse" {
   bucket = aws_s3_bucket.rubrik_cc_es.bucket
-
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "aws:kms"
@@ -137,7 +126,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "s3_bucket_sse" {
 
 resource "aws_iam_role" "rubrik_role" {
   name = format("%s%s%s", var.aws_prefix, var.aws_region, "-rubrik-s3-iamrole")
-
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -152,6 +140,7 @@ resource "aws_iam_role" "rubrik_role" {
     ]
   })
 }
+
 resource "aws_iam_role_policy" "rubrik_role_policy" {
   name = format("%s%s%s", var.aws_prefix, var.aws_region, "-rubrik-iamrolepolicy")
   role = aws_iam_role.rubrik_role.id
