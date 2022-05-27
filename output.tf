@@ -6,3 +6,7 @@ output "workoad_security_group_id" {
   description = "Apply this security to instances being backed up by Rubrik Cloud Cluster"
   value       = aws_security_group.workload_instances.id
 }
+
+output "backup_bucket_name" {
+  value = aws_s3_bucket.rubrik_cc_es.id
+}
