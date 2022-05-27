@@ -9,7 +9,7 @@ variable "rubrik_instance_type" {
 }
 
 variable "rubrik_ami_id" {
-  description = "AWS Marketplace ami id"
+  description = "Rubrik CDM's AWS Marketplace AMD ID - by default deploys rubrik-cdm-7.0.1-p4-15453"
   default     = "ami-0095fefc7754e019c" #  rubrik-cdm-7.0.1-p4-15453
 }
 
@@ -19,12 +19,12 @@ variable "aws_disable_api_termination" {
 }
 
 variable "security_group_name_rubrik_cc_instances" {
-  description = "The name of the security group to create for Rubrik Cloud Cluster intra-node communication to use."
+  description = "The name of the security group to create for Rubrik Cloud Cluster intra-node communication."
   default     = "rubrik-cc-intra-node-securitygroup"
 }
 
 variable "security_group_id_inbound_ssh_https_mgmt" {
-  description = "The id of the security group to allow inbound port 22/443 access from to Rubrik Cloud Cluster CLI"
+  description = "The id of the security group to allow inbound port 22/443 access from into Rubrik Cloud Cluster"
 }
 
 variable "security_group_name_workloads" {
