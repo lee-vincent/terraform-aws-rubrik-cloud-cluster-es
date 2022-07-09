@@ -107,6 +107,7 @@ resource "aws_instance" "rubrik_cluster" {
 
 resource "aws_s3_bucket" "rubrik_cc_es" {
   bucket_prefix = "rubrik-cc-es-"
+  force_destroy = var.force_destroy_s3_bucket
   lifecycle {
     ignore_changes = [server_side_encryption_configuration]
   }

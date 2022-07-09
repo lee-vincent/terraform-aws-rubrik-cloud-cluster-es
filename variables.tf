@@ -36,6 +36,12 @@ variable "aws_subnet_id" {
   description = "The VPC Subnet ID with route table s3 endpoint entry to launch Rubrik Cloud Cluster in."
 }
 
+variable "force_destroy_s3_bucket" {
+  description = "Force deletion of non-empty s3 bucket used for Rubrik backup data"
+  type = bool
+  default = false
+}
+
 variable "aws_prefix" {
   description = "prefix to add to tf created resources"
   default     = "tf-rubrik-cc-"
