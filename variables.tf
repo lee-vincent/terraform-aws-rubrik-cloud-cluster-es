@@ -38,8 +38,8 @@ variable "aws_subnet_id" {
 
 variable "force_destroy_s3_bucket" {
   description = "Force deletion of non-empty s3 bucket used for Rubrik backup data"
-  type = bool
-  default = false
+  type        = bool
+  default     = false
 }
 
 variable "aws_prefix" {

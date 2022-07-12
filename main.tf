@@ -15,7 +15,7 @@ resource "null_resource" "create_cluster_node_name" {
 
 locals {
   cluster_node_name = formatlist("${var.aws_prefix}%s-%s", var.aws_region, null_resource.create_cluster_node_name.*.triggers.node_number)
-  cluster_node_ips = aws_instance.rubrik_cluster.*.private_ip
+  cluster_node_ips  = aws_instance.rubrik_cluster.*.private_ip
 }
 
 data "aws_subnet" "rubrik_cloud_cluster" {
