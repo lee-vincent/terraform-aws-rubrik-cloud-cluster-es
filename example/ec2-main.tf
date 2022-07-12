@@ -44,7 +44,7 @@ resource "aws_instance" "workload_instance" {
   subnet_id              = aws_subnet.workload.id
   key_name               = var.aws_key_name
   tags = {
-    Name = "iscsi_workload"
+    Name = "workload_instance"
   }
   root_block_device {
     volume_size           = "64"
