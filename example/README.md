@@ -49,6 +49,7 @@ This quick start example first deploys the required (and fully confgured) AWS in
 
 tbd will clean up
 
+register for rubrik support portal
 configure aws cli credentials and env vars
 confiure tf_vars_
 ssh-keygenexport TF_VAR_rubrik_admin_email=""
