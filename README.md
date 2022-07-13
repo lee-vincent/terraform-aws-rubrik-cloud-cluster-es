@@ -7,7 +7,7 @@ as a useful tutorial in using ssh and curl to interact with the Rubrik API.
 ```sh
 module "rubrik-cloud-cluster-es" {
   source  = "lee-vincent/rubrik-cloud-cluster-es/aws"
-  version = "1.2.4"
+  version = "1.2.5"
   # insert the 3 required variables here
   aws_subnet_id                            = aws_subnet.rubrik.id
   security_group_id_inbound_ssh_https_mgmt = aws_security_group.bastion.id
