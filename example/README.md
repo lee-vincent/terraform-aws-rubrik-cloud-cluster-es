@@ -28,10 +28,11 @@ This quick start example first deploys the required (and fully confgured) AWS in
 > HashiCorp Terraform Cloud [sensitive workspace specific variables][tfcloud], and locally exported
 > [TF_VAR_name environment variables][TF_VAR_] which is the method used in this quick start example.
 > 
+> - aws_key_name
 > - aws_key_pub
 > - aws_key
 > - rubrik_support_password
-> - 
+> - rubrik_admin_email
 
 > and the IP address in locals
 
@@ -40,8 +41,12 @@ This quick start example first deploys the required (and fully confgured) AWS in
 
 configure aws cli credentials and env vars
 confiure tf_vars_
+ssh-keygen
+scp
+ssh port forward
 
-
+export TF_VAR_rubrik_admin_email="vinnie.lee@ahead.com"
+export TF_VAR_aws_key_name="bilh-aws-demo-master-key"
 export AWS_ACCOUNT_ID='0000000000'
 export AWS_PROFILE='aws-profile-name'
 export TF_VAR_rubrik_support_password='password'
