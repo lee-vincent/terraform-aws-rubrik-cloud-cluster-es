@@ -1,6 +1,18 @@
 data "aws_subnet" "rubrik" {
   id = aws_subnet.rubrik.id
 }
+data "aws_ami" "amazon_linux2" {
+  owners      = ["amazon"]
+  most_recent = true
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-2.0*"]
+  }
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+}
 locals {
   ssh_key_full_file_path = format("%s%s", "${var.ssh_key_pair_path}", "${var.aws_key_name}")
 }
@@ -28,10 +40,6 @@ resource "local_file" "configure_sh" {
       workload_ip                   = "${aws_instance.workload_instance.private_ip}"
   })
   filename = "${path.module}/configure.sh"
-}
-resource "aws_key_pair" "openssh_key_pair" {
-  key_name   = var.aws_key_name
-  public_key = var.aws_key_pub
 }
 resource "aws_instance" "workload_instance" {
   depends_on = [
@@ -69,4 +77,27 @@ resource "aws_instance" "workload_instance" {
     wget -O /mnt/$PURE_VOL_NAME/win22.vhd https://go.microsoft.com/fwlink/p/?linkid=2195166&clcid=0x409&culture=en-us&country=us
     chown -R ec2-user:ec2-user $PURE_MOUNT_PATH
   EOF1
+}
+resource "aws_instance" "bastion_instance" {
+  ami                    = data.aws_ami.amazon_linux2.image_id
+  instance_type          = var.aws_instance_type
+  vpc_security_group_ids = [aws_security_group.bastion.id]
+  subnet_id              = aws_subnet.public.id
+  key_name               = var.aws_key_name
+  tags = {
+    Name = "bastion_instance"
+  }
+  user_data                   = <<-EOF
+    #!/bin/bash
+    KEYPATH="${local.ssh_key_full_file_path}" && export KEYPATH
+    touch $KEYPATH
+    echo "${var.aws_key}" > $KEYPATH
+    chmod 0400 $KEYPATH
+    chown ec2-user:ec2-user $KEYPATH
+    yum update -y
+    amazon-linux-extras install epel -y
+    yum install sshpass -y
+    yum -y install jq
+  EOF
+  associate_public_ip_address = true
 }

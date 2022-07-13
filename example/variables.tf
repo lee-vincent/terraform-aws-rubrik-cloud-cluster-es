@@ -5,10 +5,6 @@ variable "aws_region" {
 variable "aws_zone" {
   type = string
 }
-variable "aws_profile" {
-  type        = string
-  description = "AWS profile"
-}
 variable "aws_key_name" {
   type = string
 }
