@@ -47,31 +47,19 @@ This quick start example first deploys the required (and fully confgured) AWS in
 
 ## Step-by-Step Instructions
 
+tbd will clean up
+
 configure aws cli credentials and env vars
 confiure tf_vars_
-ssh-keygen
-scp
-ssh port forward
-
-export TF_VAR_rubrik_admin_email="vinnie.lee@ahead.com"
-export TF_VAR_aws_key_name="bilh-aws-demo-master-key"
+ssh-keygenexport TF_VAR_rubrik_admin_email=""
+export TF_VAR_aws_key_name=""
 export AWS_ACCOUNT_ID='0000000000'
 export AWS_PROFILE='aws-profile-name'
 export TF_VAR_rubrik_support_password='password'
 export TF_VAR_aws_key_pub='openssh-public-key-string'
 export TF_VAR_aws_key='openssh-private-key-string'
-
-
-
-# TF_VAR_ SENSITIVE local environment variables #
-#################################################
-# aws_key_pub             = TF_VAR_aws_key_pub
-# aws_key                 = TF_VAR_aws_key
-# rubrik_pass             = TF_VAR_rubrik_pass
-# rubrik_support_password = TF_VAR_rubrik_support_password
-
-
-
+scp
+ssh port forward
 
 
 
