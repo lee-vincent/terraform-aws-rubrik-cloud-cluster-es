@@ -3,7 +3,7 @@ provider "aws" {
 }
 module "rubrik-cloud-cluster" {
   source                                   = "lee-vincent/rubrik-cloud-cluster-es/aws"
-  version                                  = "1.2.4"
+  version                                  = "~> 1.2.6"
   aws_region                               = var.aws_region
   aws_subnet_id                            = aws_subnet.rubrik.id
   security_group_id_inbound_ssh_https_mgmt = aws_security_group.bastion.id
