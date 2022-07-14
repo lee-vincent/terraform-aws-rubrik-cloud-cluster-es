@@ -47,6 +47,8 @@ This quick start example first deploys the required (and fully confgured) AWS in
 
 ## Step-by-Step Instructions
 
+0. Subscribe to Rubrik Cloud Cluster v7.0 in the AWS Marketplace
+
 1. Register for the [Rubrik Support Portal][rubrik_support]. This is optional but required to access the Rubrik GUI in step 8.
 
 2. Configure your local environment with AWS CLI credentials. Open a terminal/shell and run the following:
