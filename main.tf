@@ -27,7 +27,9 @@ data "aws_ami" "rubrik_ami" {
   most_recent = true
   filter {
     name   = "name"
-    values = ["rubrik-mp-cc-8-0-2-p2-22662*"]
+    # values = ["rubrik-mp-cc-8-0-2-p2-22662*"]
+    values = ["rubrik-mp-cc-8*"]
+
   }
 
 }
