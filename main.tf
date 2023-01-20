@@ -22,6 +22,16 @@ data "aws_subnet" "rubrik_cloud_cluster" {
   id = var.aws_subnet_id
 }
 
+data "aws_ami" "rubrik_ami" {
+  owners      = ["aws-marketplace"]
+  most_recent = true
+  filter {
+    name   = "name"
+    values = ["rubrik-mp-cc-8-0-2-p2-22662*"]
+  }
+
+}
+
 #########################################
 # Security Group for the Rubrik Cluster #
 #########################################
@@ -80,7 +90,8 @@ resource "aws_security_group" "workload_instances" {
 resource "aws_instance" "rubrik_cluster" {
   count                  = var.number_of_nodes
   instance_type          = var.rubrik_instance_type
-  ami                    = var.rubrik_ami_id
+  # ami                    = var.rubrik_ami_id
+  ami = data.aws_ami.rubrik_ami.image_id
   iam_instance_profile   = aws_iam_instance_profile.rubrik_ec2_profile.name
   vpc_security_group_ids = [aws_security_group.rubrik_cloud_cluster.id]
   subnet_id              = var.aws_subnet_id
