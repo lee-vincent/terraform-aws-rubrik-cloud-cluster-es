@@ -13,12 +13,6 @@ module "rubrik-cloud-cluster" {
   number_of_nodes                          = var.rubrik_node_count
   force_destroy_s3_bucket                  = true
 }
-data "http" "ip" {
-  url = "https://icanhazip.com"
-  request_headers = {
-    Accept = "text/*"
-  }
-}
 resource "aws_key_pair" "openssh_key_pair" {
   key_name   = var.aws_key_name
   public_key = var.aws_key_pub
@@ -98,7 +92,7 @@ resource "aws_security_group" "bastion" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [format("%s%s", trimspace("${data.http.ip.response_body}"), "/32")]
+    cidr_blocks = ["0.0.0.0/32"]
   }
   ingress {
     description = "allow all inbound traffic from this security group"
