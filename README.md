@@ -4,6 +4,9 @@ The full example in the example folder deploys all pre-requisite VPC infrastruct
 provides a one-line command to automatically bootstrap the cluster and configure the RBS agent and backups. It serves
 as a useful tutorial in using ssh and curl to interact with the Rubrik API.
 
+subscribe to rubirk cloud cluster v8.0 in the aws marketplace
+https://aws.amazon.com/marketplace/pp/prodview-oni4e7tc6kksa?sr=0-2&ref_=beagle&applicationId=AWS-Marketplace-Console
+
 ```sh
 module "rubrik-cloud-cluster-es" {
   source  = "lee-vincent/rubrik-cloud-cluster-es/aws"

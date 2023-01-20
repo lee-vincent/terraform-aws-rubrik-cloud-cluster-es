@@ -1,8 +1,11 @@
 # Rubrik Cloud Cluster ES on AWS Deployment Example
+[![AHEAD](https://public-bucket-general.s3.amazonaws.com/AHEAD-logo-bluebackground-180x38px.png)](https://ahead.com)
 
-## Quick Start Example Summary
 
-This quick start example first deploys the required (and fully confgured) AWS infrastructure to support a Rubrik Cloud Cluster ES deployment, and an Amazon Linux workload EC2 instance that will be backed up by the cluster. This example then deploys, bootstraps, and configures Rubrik Cloud Cluster ES into the AWS infrastructure, and automatically configures the cluster to perform backups on the workload EC2 instance.
+- Author: Vinnie Lee
+- Contact: vinnie.lee@ahead.com
+
+This module deploys the required (and fully confgured) AWS infrastructure to support a Rubrik Cloud Cluster ES deployment. This example then bootstraps, and configures Rubrik Cloud Cluster ES into the AWS infrastructure, and automatically configures the cluster to perform backups on the .
 
 ## Infrastructure that will be Deployed (and cost you money)
 

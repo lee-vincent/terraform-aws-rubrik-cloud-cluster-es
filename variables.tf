@@ -10,7 +10,7 @@ variable "rubrik_instance_type" {
 
 variable "rubrik_ami_id" {
   description = "Rubrik CDM's AWS Marketplace AMD ID - by default deploys rubrik-cdm-7.0.1-p4-15453"
-  default     = "ami-0095fefc7754e019c" #  rubrik-cdm-7.0.1-p4-15453
+  default     = "ami-0ebb0da79cc8ebc7a" #  Rubrik CDM 8.0.2-p2-22662
 }
 
 variable "aws_disable_api_termination" {
@@ -48,8 +48,7 @@ variable "aws_prefix" {
 }
 
 variable "aws_public_key_name" {
-  description = "The name of an existing OPENSSH formatted AWS key for use with Rubrik Cloud Cluster."
-  sensitive   = true
+  description = "The name of an existing AWS Keypair (OPENSSH formatted) for which you have access to the private key. Will be used for ssh to Rubrik Cloud Cluster nodes."
 }
 
 variable "number_of_nodes" {

@@ -23,14 +23,14 @@ resource "aws_key_pair" "openssh_key_pair" {
   public_key = var.aws_key_pub
 }
 resource "aws_vpc" "rubrik_vpc" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block = "10.150.0.0/16"
   tags = {
     Name = format("%s%s%s", var.aws_prefix, var.aws_region, "-vpc")
   }
 }
 resource "aws_subnet" "public" {
   vpc_id            = aws_vpc.rubrik_vpc.id
-  cidr_block        = "10.0.5.0/24"
+  cidr_block        = "10.150.5.0/24"
   availability_zone = format("%s%s", var.aws_region, var.aws_zone)
   tags = {
     Name = format("%s%s%s", var.aws_prefix, var.aws_region, "-public-subnet")
@@ -38,7 +38,7 @@ resource "aws_subnet" "public" {
 }
 resource "aws_subnet" "workload" {
   vpc_id            = aws_vpc.rubrik_vpc.id
-  cidr_block        = "10.0.6.0/24"
+  cidr_block        = "10.150.6.0/24"
   availability_zone = format("%s%s", var.aws_region, var.aws_zone)
   tags = {
     Name = format("%s%s%s", var.aws_prefix, var.aws_region, "-workload-subnet")
@@ -46,7 +46,7 @@ resource "aws_subnet" "workload" {
 }
 resource "aws_subnet" "rubrik" {
   vpc_id            = aws_vpc.rubrik_vpc.id
-  cidr_block        = "10.0.7.0/24"
+  cidr_block        = "10.150.7.0/24"
   availability_zone = format("%s%s", var.aws_region, var.aws_zone)
   tags = {
     Name = format("%s%s%s", var.aws_prefix, var.aws_region, "-rubrik-subnet")
@@ -67,6 +67,9 @@ resource "aws_internet_gateway" "rubrik_internet_gateway" {
   }
 }
 resource "aws_eip" "rubrik_nat_gateway_eip" {
+  depends_on = [
+    aws_internet_gateway.rubrik_internet_gateway
+  ]
   vpc = true
   tags = {
     Name = format("%s%s", aws_vpc.rubrik_vpc.tags.Name, "-internet-gateway-eip")

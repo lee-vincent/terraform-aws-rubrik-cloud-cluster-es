@@ -1,6 +1,7 @@
 data "aws_subnet" "rubrik" {
   id = aws_subnet.rubrik.id
 }
+
 data "aws_ami" "amazon_linux2" {
   owners      = ["amazon"]
   most_recent = true
