@@ -1,0 +1,153 @@
+#!/bin/bash
+RUBRIK_IP=${rubrik_ip}
+# RUBRIK_USER=${rubrik_user}
+# RUBRIK_FILESET_NAME_PREFIX=${rubrik_fileset_name_prefix}
+# RUBRIK_FILESET_FOLDER_PATH=${rubrik_fileset_folder_path}
+# SLA_DOMAIN='Bronze'
+# WORKLOAD_IP=${workload_ip}
+# SSH_KEY_FULL_FILE_PATH=${ssh_key_full_file_path}
+# RUBRIK_SUPPORT_PASSWORD='${rubrik_support_password}'
+
+# # variables needed for Rubrik Cloud Cluster ES bootstrap
+# RUBRIK_ADMIN_EMAIL=${rubrik_admin_email}
+# RUBRIK_PASS=${rubrik_pass}
+# RUBRIK_CLUSTER_NAME=${rubrik_cluster_name}
+# RUBRIK_DNS_NAMESERVERS=${rubrik_dns_nameservers}
+# RUBRIK_DNS_SEARCH_DOMAIN=${rubrik_dns_search_domain}
+# RUBRIK_NTP_SERVERS=${rubrik_ntp_servers}
+# RUBRIK_USE_CLOUD_STORAGE=${rubrik_use_cloud_storage}
+# RUBRIK_S3_BUCKET=${rubrik_s3_bucket}
+# RUBRIK_MANAGEMENT_GATEWAY=${rubrik_management_gateway}
+# RUBRIK_MANAGEMENT_SUBNET_MASK=${rubrik_management_subnet_mask}
+# RUBRIK_NODE_COUNT=${rubrik_node_count}
+# RUBRIK_IP_ADDRS="%{ for addr in ip_addrs ~}${addr}\n%{ endfor ~}"
+
+
+# # Bootstrap the AWS Rubrik Cloud Cluster ES over SSH key pair authentication
+# echo -e -n "$RUBRIK_ADMIN_EMAIL\n$RUBRIK_PASS\n$RUBRIK_PASS\n$RUBRIK_CLUSTER_NAME\n$RUBRIK_DNS_NAMESERVERS\n$RUBRIK_DNS_SEARCH_DOMAIN\n$RUBRIK_NTP_SERVERS\n$RUBRIK_USE_CLOUD_STORAGE\n$RUBRIK_S3_BUCKET\n$RUBRIK_MANAGEMENT_GATEWAY\n$RUBRIK_MANAGEMENT_SUBNET_MASK\n$RUBRIK_NODE_COUNT\n$RUBRIK_IP_ADDRS\n" | ssh -i "$SSH_KEY_FULL_FILE_PATH" -oStrictHostKeyChecking=no $RUBRIK_USER@$RUBRIK_IP cluster bootstrap
+# # give the API a couple seconds
+# sleep 10
+# echo -e "\n\n\n"
+# # cluster bootstrap status transitions: UNKNOWN -> IN_PROGRESS -> 
+# # sample response:
+# # ====================
+# # Status: UNKNOWN
+# # Current task: None
+# # Pending tasks: []
+# # Completed tasks: []
+# # Message:
+# # ====================
+# # need to use sshpass because admin password required after bootstrap success
+# STATUS=$(sshpass -p $RUBRIK_PASS ssh -i "$SSH_KEY_FULL_FILE_PATH" -oStrictHostKeyChecking=no $RUBRIK_USER@$RUBRIK_IP cluster bootstrap status | grep Status | cut -d " " -f 2)
+# echo "Rubrik Cluster Bootstrap Status: $STATUS"
+# [[ $STATUS != SUCCESS ]] && echo "bootstrap failed" && exit 1
+
+# # poll the http response code of the RBS agent download URL until we get a 200
+# # after getting a 200 we can safely download the RBS agent and install on workload instance
+# # the extra % in '%%{http_code}\n' avoids starting a terraform template directive
+# RBS=0
+# while [ $RBS -ne 200 ] ; do echo "RBS Endpoint: $RBS" ; RBS=$(curl -w '%%{http_code}\n' -s -k --url "https://$RUBRIK_IP/connector/rubrik-agent.x86_64.rpm" -o /dev/null) ; sleep 2 ; done
+
+# # # install Rubrik RBS Connector on the workload instance
+# curl -k --connect-timeout 30 --retry 10 --retry-connrefused -C - --url "https://$RUBRIK_IP/connector/rubrik-agent.x86_64.rpm" -o /tmp/rubrik-agent.x86_64.rpm
+# scp -i "$SSH_KEY_FULL_FILE_PATH" -oStrictHostKeyChecking=no /tmp/rubrik-agent.x86_64.rpm ec2-user@$WORKLOAD_IP:/tmp/
+# ssh -i "$SSH_KEY_FULL_FILE_PATH" -oStrictHostKeyChecking=no ec2-user@$WORKLOAD_IP sudo rpm -i /tmp/rubrik-agent.x86_64.rpm
+# rm -f /tmp/rubrik-agent.x86_64.rpm
+
+# # create and start a script on the workload instance that generates a 1MB file every 15 seconds
+# # so Rubrik has new things to back up
+# echo 'i=0 ; while [[ true ]] ; do dd if=/dev/urandom bs=1 count=1024 of='$RUBRIK_FILESET_FOLDER_PATH'/file-$i.dat status=none ; i=$(( $i + 1 )) ; sleep 15 ; done' > filegen.sh
+# chmod +x filegen.sh
+# scp -i "$SSH_KEY_FULL_FILE_PATH" -oStrictHostKeyChecking=no ./filegen.sh ec2-user@$WORKLOAD_IP:/home/ec2-user/
+# ssh -i "$SSH_KEY_FULL_FILE_PATH" -oStrictHostKeyChecking=no ec2-user@$WORKLOAD_IP /home/ec2-user/filegen.sh &
+
+# # Register Cluster
+# # disable history expansion in case user's password contains an !
+# set +H
+# curl -s -k -u "$RUBRIK_USER:$RUBRIK_PASS" --header 'Content-Type':'application/json' --header 'Accept':'application/json' -X POST https://$RUBRIK_IP/api/internal/cluster/me/register -d "{\"username\":\"$RUBRIK_ADMIN_EMAIL\",\"password\":\"$RUBRIK_SUPPORT_PASSWORD\"}"
+# set -H
+# REGISTRATION_STATUS=$(curl -s -k -u "$RUBRIK_USER:$RUBRIK_PASS" -X GET https://$RUBRIK_IP/api/internal/cluster/me/is_registered | jq '.value')
+# echo "Registration Status Result: $REGISTRATION_STATUS"
+
+# # disable TOTP reminders
+# curl -k -s -u "$RUBRIK_USER:$RUBRIK_PASS" --header 'Content-Type':'application/json' --header 'Accept':'application/json' -X PUT https://$RUBRIK_IP/api/v1/cluster/me/security/totp/setting -d "{\"isEnforced\":false,\"isReminderEnabled\":false,\"isTotpEnforceUndecided\":false}"
+
+# # # get auth token
+# TOKEN="Bearer $(curl -k -s -u "$RUBRIK_USER:$RUBRIK_PASS" -X POST https://$RUBRIK_IP/api/v1/session | jq -r '.token')"
+
+# # # add host to Rubrik
+# ADD_HOST=$(curl -k -s \
+#     --header "Authorization: $TOKEN" \
+#     --header 'Content-Type':'application/json' \
+#     --header 'Accept':'application/json' \
+#     -X POST https://$RUBRIK_IP/api/v1/host \
+#     -d "{\"hostname\":\"$WORKLOAD_IP\",\"hasAgent\":true}")
+# MY_HOST_ID=$(echo $ADD_HOST | jq -r '.id')
+# if [ $MY_HOST_ID == 'null' ]; then
+#     echo $(echo $ADD_HOST | jq -r '.message')
+#     echo "Something went wrong adding the host to the Rubrik system, exiting"
+#     exit 1
+# fi
+
+# # # check if fileset template exists
+# FILESET_TEMPLATES=$(curl -k -s --header "Authorization: $TOKEN" -X GET https://$RUBRIK_IP/api/v1/fileset_template)
+# MY_FILESET_TEMPLATE=$(echo $FILESET_TEMPLATES | jq -c ".data[] | select(.includes[]==\"$RUBRIK_FILESET_FOLDER_PATH\")" | jq -r '.id')
+# # # create fileset template if it does not exist
+# if [ -z $MY_FILESET_TEMPLATE ]; then
+#     echo "Fileset Template not found, creating..."
+#     NEW_FILESET_TEMPLATE=$(curl -k -s \
+#         --header "Authorization: $TOKEN" \
+#         --header 'Content-Type':'application/json' \
+#         --header 'Accept':'application/json' \
+#         -X POST https://$RUBRIK_IP/api/v1/fileset_template \
+#         -d "{\"name\":\"$RUBRIK_FILESET_NAME_PREFIX: $RUBRIK_FILESET_FOLDER_PATH\",\"includes\":[\"$RUBRIK_FILESET_FOLDER_PATH\"],\"operatingSystemType\":\"Linux\"}"
+#         )
+#     MY_FILESET_TEMPLATE=$(echo $NEW_FILESET_TEMPLATE | jq -r '.id')
+# else
+#     echo "Fileset Template found"
+# fi
+# # check that fileset exists
+# MY_FILESET=$(curl -k -s --header "Authorization: $TOKEN" -X GET \
+#     "https://$RUBRIK_IP/api/v1/fileset?host_id=$MY_HOST_ID&template_id=$MY_FILESET_TEMPLATE" | jq -r '.data[0].id')
+# if [ $MY_FILESET == 'null' ]; then
+#     echo "Fileset not found, creating..."
+#     NEW_FILESET=$(curl -k -s \
+#         --header "Authorization: $TOKEN" \
+#         --header 'Content-Type':'application/json' \
+#         --header 'Accept':'application/json' \
+#         -X POST https://$RUBRIK_IP/api/v1/fileset \
+#         -d "{\"hostId\": \"$MY_HOST_ID\",\"templateId\": \"$MY_FILESET_TEMPLATE\"}"
+#         )
+#     MY_FILESET=$(echo $NEW_FILESET | jq -r '.id')
+# else
+#     echo "Fileset found"
+# fi
+
+# # # check if sla domain exists
+# SLA_DOMAINS=$(curl -k -s --header "Authorization: $TOKEN" -X GET https://$RUBRIK_IP/api/v1/sla_domain)
+# MY_SLA_DOMAIN=$(echo $SLA_DOMAINS | jq -c ".data[] | select(.name==\"$SLA_DOMAIN\")" | jq -r '.id')
+# if [ -z $MY_SLA_DOMAIN ]; then
+#     echo "SLA Domain $SLA_DOMAIN not found on Rubrik system, exiting"
+#     exit 1
+# fi
+
+# # # take rubrik on demand snapshot (backup)
+# SNAPSHOT_REQ=$(curl -k -s \
+#     --header "Authorization: $TOKEN" -X POST \
+#     --header 'Content-Type: application/json' \
+#     --header 'Accept: application/json' \
+#     "https://$RUBRIK_IP/api/v1/fileset/$MY_FILESET/snapshot" \
+#     -d "{\"slaId\":\"$MY_SLA_DOMAIN\"}")
+# SNAPSHOT_URL=$(echo $SNAPSHOT_REQ | jq -r '.links[0].href')
+# SNAPSHOT_STATUS=$(echo $SNAPSHOT_REQ | jq -r '.status')
+# while [ $SNAPSHOT_STATUS != 'SUCCEEDED' ] && [ $SNAPSHOT_STATUS != 'FAILED' ]
+# do
+#     echo "Snapshot status is $SNAPSHOT_STATUS, sleeping..."
+#     sleep 5
+#     SNAPSHOT_STATUS=$(curl -k -s \
+#         --header "Authorization: $TOKEN" -X GET \
+#         $SNAPSHOT_URL | jq -r '.status')
+# done
+# echo "Snapshot done"
+
+# exit 0

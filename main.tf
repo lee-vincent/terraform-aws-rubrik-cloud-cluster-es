@@ -20,6 +20,33 @@ locals {
   rubrik_ami           = var.rubrik_ami != "" ? var.rubrik_ami : "${data.aws_ami.rubrik_ami.image_id}"
 }
 
+resource "local_file" "configure_sh" {
+  count = var.bootstrap_cluster ? 1 : 0
+  content = templatefile("${path.module}/bootstrap.tftpl",
+    {
+      rubrik_ip = "${aws_instance.rubrik_cluster.0.private_ip}",
+      # rubrik_node_count = "${var.number_of_nodes}",
+      # ip_addrs          = "${aws_instance.rubrik_cluster.*.private_ip}",
+      # rubrik_support_password       = "${var.rubrik_support_password}",
+      # rubrik_admin_email            = "${var.rubrik_admin_email}",
+      # rubrik_user                   = "${var.rubrik_user}",
+      # rubrik_pass                   = "${var.rubrik_pass}",
+      # rubrik_cluster_name           = "${var.rubrik_cluster_name}",
+      # rubrik_s3_bucket              = "${module.rubrik-cloud-cluster.backup_bucket_name}",
+      # rubrik_management_gateway     = cidrhost("${data.aws_subnet.rubrik.cidr_block}", 1)
+      # rubrik_management_subnet_mask = cidrnetmask("${data.aws_subnet.rubrik.cidr_block}")
+      # rubrik_dns_search_domain      = "${var.rubrik_dns_search_domain}"
+      # rubrik_dns_nameservers        = "${var.rubrik_dns_nameservers}"
+      # rubrik_ntp_servers            = "${var.rubrik_ntp_servers}"
+      # rubrik_use_cloud_storage      = "${var.rubrik_use_cloud_storage}"
+      # ssh_key_full_file_path        = "${local.ssh_key_full_file_path}"
+      # rubrik_fileset_name_prefix    = "${var.rubrik_fileset_name_prefix}",
+      # rubrik_fileset_folder_path    = "${var.rubrik_fileset_folder_path}",
+      # workload_ip                   = "${aws_instance.workload_instance.private_ip}"
+  })
+  filename = "${path.module}/bootstrap.sh"
+}
+
 data "aws_subnet" "rubrik_cloud_cluster" {
   id = var.aws_subnet_id
 }
@@ -28,12 +55,9 @@ data "aws_ami" "rubrik_ami" {
   owners      = ["aws-marketplace"]
   most_recent = true
   filter {
-    name = "name"
-    # values = ["rubrik-mp-cc-8-0-2-p2-22662*"]
+    name   = "name"
     values = ["rubrik-mp-cc-8*"]
-
   }
-
 }
 
 #########################################
