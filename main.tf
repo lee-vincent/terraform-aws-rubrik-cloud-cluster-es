@@ -18,8 +18,6 @@ locals {
   cluster_node_ips     = aws_instance.rubrik_cluster.*.private_ip
   rubrik_instance_type = "m5.4xlarge"
   rubrik_ami           = var.rubrik_ami != "" ? var.rubrik_ami : "${data.aws_ami.rubrik_ami.image_id}"
-
-
 }
 
 data "aws_subnet" "rubrik_cloud_cluster" {
@@ -96,7 +94,7 @@ resource "aws_security_group" "workload_instances" {
 resource "aws_instance" "rubrik_cluster" {
   count                  = var.number_of_nodes
   instance_type          = local.rubrik_instance_type
-  ami                    = local.rubrik_ami
+  ami                    = local.rubrik_ami.image_id
   iam_instance_profile   = aws_iam_instance_profile.rubrik_ec2_profile.name
   vpc_security_group_ids = [aws_security_group.rubrik_cloud_cluster.id]
   subnet_id              = var.aws_subnet_id

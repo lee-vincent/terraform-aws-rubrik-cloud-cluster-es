@@ -50,3 +50,8 @@ variable "number_of_nodes" {
   description = "The total number of nodes in Rubrik Cloud Cluster ES."
   default     = 3
 }
+
+variable "bootstrap_cluster" {
+  type    = bool
+  default = true
+}
