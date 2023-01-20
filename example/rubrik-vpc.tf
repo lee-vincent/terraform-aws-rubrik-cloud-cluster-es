@@ -6,6 +6,7 @@ module "rubrik-cloud-cluster" {
   source = "git::https://github.com/lee-vincent/terraform-aws-rubrik-cloud-cluster-es.git?ref=v8.0"
   # version                                  = "~> 1.2.6"
   aws_region                               = var.aws_region
+  rubrik_ami = "1111111111111111111"
   aws_subnet_id                            = aws_subnet.rubrik.id
   security_group_id_inbound_ssh_https_mgmt = aws_security_group.bastion.id
   aws_public_key_name                      = var.aws_key_name

@@ -12,3 +12,6 @@ output "backup_bucket_name" {
   description = "S3 bucket name to use during Rubrik bootstrap process"
   value       = aws_s3_bucket.rubrik_cc_es.id
 }
+output "rubrik_ami" {
+  value = aws_instance.rubrik_cluster[0].ami
+}
