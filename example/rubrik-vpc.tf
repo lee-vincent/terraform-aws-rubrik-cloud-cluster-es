@@ -11,6 +11,7 @@ module "rubrik-cloud-cluster" {
   aws_public_key_name                      = var.aws_key_name
   aws_disable_api_termination              = false
   number_of_nodes                          = var.rubrik_node_count
+  bootstrap_cluster                        = true
   force_destroy_s3_bucket                  = true
 }
 resource "aws_key_pair" "openssh_key_pair" {
