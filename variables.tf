@@ -3,14 +3,9 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "rubrik_instance_type" {
-  description = "The type of instance to use as Rubrik Cloud Cluster ES nodes."
-  default     = "m5.4xlarge" # m5.4xlarge this is the only supported Rubrik CC ES instance type
-}
-
-variable "rubrik_ami_id" {
-  description = "Rubrik CDM's AWS Marketplace AMD ID - by default deploys rubrik-cdm-7.0.1-p4-15453"
-  default     = "ami-0ebb0da79cc8ebc7a" #  Rubrik CDM 8.0.2-p2-22662
+variable "rubrik_ami" {
+  description = "Rubrik CDM's AWS Marketplace AMD ID"
+  default     = ""
 }
 
 variable "aws_disable_api_termination" {

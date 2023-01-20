@@ -14,8 +14,12 @@ resource "null_resource" "create_cluster_node_name" {
 }
 
 locals {
-  cluster_node_name = formatlist("${var.aws_prefix}%s-%s", var.aws_region, null_resource.create_cluster_node_name.*.triggers.node_number)
-  cluster_node_ips  = aws_instance.rubrik_cluster.*.private_ip
+  cluster_node_name    = formatlist("${var.aws_prefix}%s-%s", var.aws_region, null_resource.create_cluster_node_name.*.triggers.node_number)
+  cluster_node_ips     = aws_instance.rubrik_cluster.*.private_ip
+  rubrik_instance_type = "m5.4xlarge"
+  rubrik_ami           = var.rubrik_ami != "" ? var.rubrik_ami : "${data.aws_ami.rubrik_ami}"
+
+
 }
 
 data "aws_subnet" "rubrik_cloud_cluster" {
@@ -26,7 +30,7 @@ data "aws_ami" "rubrik_ami" {
   owners      = ["aws-marketplace"]
   most_recent = true
   filter {
-    name   = "name"
+    name = "name"
     # values = ["rubrik-mp-cc-8-0-2-p2-22662*"]
     values = ["rubrik-mp-cc-8*"]
 
@@ -91,9 +95,8 @@ resource "aws_security_group" "workload_instances" {
 
 resource "aws_instance" "rubrik_cluster" {
   count                  = var.number_of_nodes
-  instance_type          = var.rubrik_instance_type
-  # ami                    = var.rubrik_ami_id
-  ami = data.aws_ami.rubrik_ami.image_id
+  instance_type          = local.rubrik_instance_type
+  ami                    = local.rubrik_ami.image_id
   iam_instance_profile   = aws_iam_instance_profile.rubrik_ec2_profile.name
   vpc_security_group_ids = [aws_security_group.rubrik_cloud_cluster.id]
   subnet_id              = var.aws_subnet_id
