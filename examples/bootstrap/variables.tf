@@ -7,21 +7,13 @@ variable "aws_zone" {
   type    = string
   default = "a"
 }
-variable "aws_key_name" {
-  type    = string
-  default = "rubrik-key"
-}
-variable "aws_key_pub" {
-  type    = string
-  default = "test"
-}
 variable "aws_prefix" {
   default = "rubrik-cc-es"
 }
 variable "aws_instance_type" {
   type        = string
-  description = "EC2 instance type to use for the bastion host and workload host"
-  default     = "t3.large"
+  description = "EC2 instance type to use for the bastion"
+  default     = "t3.micro"
 }
 # Rubrik Cloud Cluster Variables
 variable "rubrik_support_password" {
@@ -76,11 +68,12 @@ variable "rubrik_fileset_folder_path" {
   type    = string
   default = "/mnt/epic-iscsi-vol"
 }
-# i can make this a local variable instead
-variable "ssh_key_pair_path" {
-  type    = string
-  default = "/home/ec2-user/.ssh/"
+variable "rubrik_key_name" {
+  description = "The name of an existing AWS Keypair (OPENSSH formatted) for which you have access to the private key. Will be used for ssh to Rubrik Cloud Cluster nodes."
 }
-variable "aws_key" {
-  default = "private-key"
+variable "rubrik_public_key" {
+  description = "OpenSSH public key that will be configured on the EC2 rubrik nodes"
+}
+variable "rubrik_private_key" {
+  description = "OpenSSH private key that will be added to secrets manager"
 }

@@ -1,22 +1,72 @@
 provider "aws" {
-  region = var.aws_region
+  region  = var.aws_region
+  profile = "ahead"
 }
+# keys used by ec2 bastion to manage rubrik nodes
+resource "aws_secretsmanager_secret" "rubrik_cloud_cluster" {
+  name                    = var.rubrik_key_name
+  recovery_window_in_days = 0
+  description             = "OpenSSH private key used to bootstrap rubrik cloud cluster nodes"
+}
+resource "aws_secretsmanager_secret_version" "rubrik_private_key_value" {
+  secret_id     = aws_secretsmanager_secret.rubrik_cloud_cluster.id
+  secret_string = var.rubrik_private_key
+}
+resource "aws_secretsmanager_secret" "rubrik_cloud_cluster_pub" {
+  name                    = "${var.rubrik_key_name}.pub"
+  recovery_window_in_days = 0
+  description             = "OpenSSH public key used to bootstrap rubrik cloud cluster nodes"
+}
+resource "aws_secretsmanager_secret_version" "rubrik_public_key_value" {
+  secret_id     = aws_secretsmanager_secret.rubrik_cloud_cluster_pub.id
+  secret_string = var.rubrik_public_key
+}
+data "aws_secretsmanager_secret" "rubrik_cloud_cluster_pub" {
+  name = aws_secretsmanager_secret.rubrik_cloud_cluster_pub.name
+}
+data "aws_secretsmanager_secret_version" "rubrik_public_key_value" {
+  secret_id = data.aws_secretsmanager_secret.rubrik_cloud_cluster_pub.id
+}
+resource "aws_key_pair" "rubrik" {
+  key_name   = aws_secretsmanager_secret.rubrik_cloud_cluster.name
+  public_key = aws_secretsmanager_secret_version.rubrik_public_key_value.secret_string
+}
+data "aws_ami" "amazon_linux2" {
+  owners      = ["amazon"]
+  most_recent = true
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-2.0*"]
+  }
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+}
+resource "aws_instance" "bastion" {
+  ami           = data.aws_ami.amazon_linux2.image_id
+  instance_type = var.aws_instance_type
+  key_name      = aws_key_pair.rubrik.key_name
+  # vpc_security_group_ids = [aws_security_group.bastion.id, module.rubrik-cloud-cluster.workoad_security_group_id]
+  subnet_id = aws_subnet.workload.id
+  tags = {
+    Name = "bastion"
+  }
+  associate_public_ip_address = true
+}
+
 module "rubrik-cloud-cluster" {
   # source                                   = "lee-vincent/rubrik-cloud-cluster-es/aws"
-  source = "git::https://github.com/lee-vincent/terraform-aws-rubrik-cloud-cluster-es.git?ref=v8.0"
   # version                                  = "~> 1.2.6"
+  source                                   = "git::https://github.com/lee-vincent/terraform-aws-rubrik-cloud-cluster-es.git?ref=v8.0"
   aws_region                               = var.aws_region
   aws_subnet_id                            = aws_subnet.rubrik.id
   security_group_id_inbound_ssh_https_mgmt = aws_security_group.bastion.id
-  rubrik_key_name                      = var.aws_key_name
+  rubrik_key_name                          = var.rubrik_key_name
   aws_disable_api_termination              = false
-  rubrik_node_count                          = var.rubrik_node_count
+  rubrik_node_count                        = var.rubrik_node_count
   bootstrap_cluster                        = true
   force_destroy_s3_bucket                  = true
-}
-resource "aws_key_pair" "openssh_key_pair" {
-  key_name   = var.aws_key_name
-  public_key = var.aws_key_pub
 }
 resource "aws_vpc" "rubrik_vpc" {
   cidr_block = "10.150.0.0/16"
