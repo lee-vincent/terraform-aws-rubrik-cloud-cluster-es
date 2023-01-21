@@ -43,25 +43,26 @@ data "aws_ami" "amazon_linux2" {
     values = ["x86_64"]
   }
 }
+# next add a bastion spcific key and use user data and secrets manager agent to pull
+# the rubrik key onto the bastion
 resource "aws_instance" "bastion" {
   ami           = data.aws_ami.amazon_linux2.image_id
   instance_type = var.aws_instance_type
   key_name      = aws_key_pair.rubrik.key_name
-  # vpc_security_group_ids = [aws_security_group.bastion.id, module.rubrik-cloud-cluster.workoad_security_group_id]
+  vpc_security_group_ids = [aws_security_group.workstation_bastion.id, module.rubrik_cloud_cluster.bastion_rubrik_security_group]
   subnet_id = aws_subnet.workload.id
   tags = {
     Name = "bastion"
   }
   associate_public_ip_address = true
 }
-
-module "rubrik-cloud-cluster" {
+# then create new security group for bastion to nodes communication
+module "rubrik_cloud_cluster" {
   # source                                   = "lee-vincent/rubrik-cloud-cluster-es/aws"
   # version                                  = "~> 1.2.6"
   source                                   = "git::https://github.com/lee-vincent/terraform-aws-rubrik-cloud-cluster-es.git?ref=v8.0"
   aws_region                               = var.aws_region
   aws_subnet_id                            = aws_subnet.rubrik.id
-  security_group_id_inbound_ssh_https_mgmt = aws_security_group.bastion.id
   rubrik_key_name                          = var.rubrik_key_name
   aws_disable_api_termination              = false
   rubrik_node_count                        = var.rubrik_node_count
@@ -131,12 +132,12 @@ resource "aws_nat_gateway" "rubrik_nat_gateway" {
   # on the Internet Gateway for the VPC.
   depends_on = [aws_internet_gateway.rubrik_internet_gateway]
 }
-resource "aws_security_group" "bastion" {
-  name        = format("%s%s", aws_vpc.rubrik_vpc.tags.Name, "-bastion-securitygroup")
+resource "aws_security_group" "workstation_bastion" {
+  name        = "workstation-bastion-sg"
   description = "Allow inbound SSH from my workstation IP"
   vpc_id      = aws_vpc.rubrik_vpc.id
   tags = {
-    Name = format("%s%s", aws_vpc.rubrik_vpc.tags.Name, "-bastion-securitygroup")
+    Name = format("%s%s", aws_vpc.rubrik_vpc.tags.Name, "-bastion-sg")
   }
   ingress {
     description = "allow ssh from my workstation ip"
@@ -144,20 +145,6 @@ resource "aws_security_group" "bastion" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/32"]
-  }
-  ingress {
-    description = "allow all inbound traffic from this security group"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    self        = true
-  }
-  egress {
-    description = "all outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 resource "aws_route_table_association" "public" {

@@ -30,14 +30,11 @@ variable "aws_disable_api_termination" {
 }
 variable "security_group_name_rubrik_cc_instances" {
   description = "The name of the security group to create for Rubrik Cloud Cluster intra-node communication."
-  default     = "rubrik-cc-intra-node-securitygroup"
-}
-variable "security_group_id_inbound_ssh_https_mgmt" {
-  description = "The id of the security group to allow inbound port 22/443 access from into Rubrik Cloud Cluster"
+  default     = "rubrik-nodes-sg"
 }
 variable "security_group_name_workloads" {
   description = "The name of the security group to create for Rubrik Cloud Cluster to communicate with EC2 workload instances."
-  default     = "rubrik-cc-workload-securitygroup"
+  default     = "ec2-workloads-rubrik-sg"
 }
 variable "force_destroy_s3_bucket" {
   description = "Force deletion of non-empty s3 bucket used for Rubrik backup data"

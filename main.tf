@@ -64,50 +64,61 @@ data "aws_ami" "rubrik_ami" {
 # Security Group for the Rubrik Cluster #
 #########################################
 
-resource "aws_security_group" "rubrik_cloud_cluster" {
+resource "aws_security_group" "rubrik_nodes" {
   name        = var.security_group_name_rubrik_cc_instances
-  description = "Allow Rubrik Cloud Cluster intra-node communication"
+  description = "Allow all between Rubrik nodes"
   vpc_id      = data.aws_subnet.rubrik_cloud_cluster.vpc_id
   ingress {
-    description = "Intra cluster communication"
+    description = "allow all in between rubrik nodes"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     self        = true
   }
-  ingress {
-    description     = "SSH"
-    from_port       = 22
-    to_port         = 22
-    protocol        = "tcp"
-    security_groups = ["${var.security_group_id_inbound_ssh_https_mgmt}"]
-  }
-  ingress {
-    description     = "HTTPS"
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = ["${var.security_group_id_inbound_ssh_https_mgmt}"]
-  }
   egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    description = "allow all out"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
-resource "aws_security_group" "workload_instances" {
+resource "aws_security_group" "bastion_rubrik" {
+  name        = "bastion-rubrik-sg"
+  description = "Allow management from bastion"
+  vpc_id      = data.aws_subnet.rubrik_cloud_cluster.vpc_id
+  ingress {
+    description = "allow https in between sg"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "-1"
+    self        = true
+  }
+  ingress {
+    description = "allow ssh in between sg"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "-1"
+    self        = true
+  }
+  egress {
+    description = "allow all out"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    self        = true
+  }
+}
+resource "aws_security_group" "ec2_workloads_rubrik" {
   name        = var.security_group_name_workloads
-  description = "Allow Rubrik Cloud Cluster to communicate with workload instances"
+  description = "Allow inbound from Rubrik Cloud Cluster"
   vpc_id      = data.aws_subnet.rubrik_cloud_cluster.vpc_id
   ingress {
     description     = "Ports for Rubrik Backup Service (RBS)"
     from_port       = 12800
     to_port         = 12801
     protocol        = "tcp"
-    security_groups = ["${aws_security_group.rubrik_cloud_cluster.id}"]
+    security_groups = ["${aws_security_group.rubrik_nodes.id}"]
   }
 }
 ###############################
@@ -115,14 +126,17 @@ resource "aws_security_group" "workload_instances" {
 ###############################
 
 resource "aws_instance" "rubrik_cluster" {
-  count                  = var.rubrik_node_count
-  instance_type          = local.rubrik_instance_type
-  ami                    = local.rubrik_ami
-  iam_instance_profile   = aws_iam_instance_profile.rubrik_ec2_profile.name
-  vpc_security_group_ids = [aws_security_group.rubrik_cloud_cluster.id]
-  subnet_id              = var.aws_subnet_id
-  key_name               = var.rubrik_key_name
-  source_dest_check      = false
+  count                = var.rubrik_node_count
+  instance_type        = local.rubrik_instance_type
+  ami                  = local.rubrik_ami
+  iam_instance_profile = aws_iam_instance_profile.rubrik_ec2_profile.name
+  vpc_security_group_ids = [
+    aws_security_group.rubrik_nodes.id,
+    aws_security_group.bastion_rubrik.id
+  ]
+  subnet_id         = var.aws_subnet_id
+  key_name          = var.rubrik_key_name
+  source_dest_check = false
   tags = {
     Name = element(local.cluster_node_name, count.index)
   }
