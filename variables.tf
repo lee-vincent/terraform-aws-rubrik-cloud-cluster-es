@@ -12,11 +12,13 @@ variable "aws_subnet_id" {
 variable "rubrik_key_name" {
   description = "The name of an existing AWS Keypair (OPENSSH formatted) for which you have access to the private key. Will be used for ssh to Rubrik Cloud Cluster nodes."
 }
-variable "rubrik_public_key" {
-  description = "OpenSSH public key that will be configured on the EC2 rubrik nodes"
+variable "rubrik_node_count" {
+  description = "The total number of nodes in Rubrik Cloud Cluster ES."
+  default     = 3
 }
-variable "rubrik_private_key" {
-  description = "OpenSSH private key that will be added to secrets manager"
+variable "bootstrap_cluster" {
+  type    = bool
+  default = true
 }
 variable "rubrik_ami" {
   description = "Rubrik CDM's AWS Marketplace AMD ID"
@@ -41,12 +43,4 @@ variable "force_destroy_s3_bucket" {
   description = "Force deletion of non-empty s3 bucket used for Rubrik backup data"
   type        = bool
   default     = false
-}
-variable "rubrik_node_count" {
-  description = "The total number of nodes in Rubrik Cloud Cluster ES."
-  default     = 3
-}
-variable "bootstrap_cluster" {
-  type    = bool
-  default = true
 }
