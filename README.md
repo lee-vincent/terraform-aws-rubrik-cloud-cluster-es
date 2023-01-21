@@ -7,6 +7,9 @@ as a useful tutorial in using ssh and curl to interact with the Rubrik API.
 subscribe to rubirk cloud cluster v8.0 in the aws marketplace
 https://aws.amazon.com/marketplace/pp/prodview-oni4e7tc6kksa?sr=0-2&ref_=beagle&applicationId=AWS-Marketplace-Console
 
+ssh-keygen -C "" -f /home/vlee/.ssh/rubrik-key -N ""
+
+
 ```sh
 module "rubrik-cloud-cluster-es" {
   source  = "lee-vincent/rubrik-cloud-cluster-es/aws"
@@ -14,6 +17,6 @@ module "rubrik-cloud-cluster-es" {
   # insert the 3 required variables here
   aws_subnet_id                            = aws_subnet.rubrik.id
   security_group_id_inbound_ssh_https_mgmt = aws_security_group.bastion.id
-  aws_public_key_name                      = aws_key_pair.master_key_name
+  rubrik_key_name                      = aws_key_pair.master_key_name
 }
 ```

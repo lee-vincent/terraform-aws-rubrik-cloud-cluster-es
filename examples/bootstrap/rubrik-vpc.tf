@@ -8,9 +8,9 @@ module "rubrik-cloud-cluster" {
   aws_region                               = var.aws_region
   aws_subnet_id                            = aws_subnet.rubrik.id
   security_group_id_inbound_ssh_https_mgmt = aws_security_group.bastion.id
-  aws_public_key_name                      = var.aws_key_name
+  rubrik_key_name                      = var.aws_key_name
   aws_disable_api_termination              = false
-  number_of_nodes                          = var.rubrik_node_count
+  rubrik_node_count                          = var.rubrik_node_count
   bootstrap_cluster                        = true
   force_destroy_s3_bucket                  = true
 }

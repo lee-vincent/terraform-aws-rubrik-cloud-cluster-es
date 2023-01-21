@@ -6,7 +6,7 @@ provider "aws" {
 # Dynamic Variable Creation #
 #############################
 resource "null_resource" "create_cluster_node_name" {
-  count = var.number_of_nodes
+  count = var.rubrik_node_count
 
   triggers = {
     node_number = count.index + 1
@@ -25,7 +25,7 @@ resource "local_file" "configure_sh" {
   content = templatefile("${path.module}/bootstrap.tftpl",
     {
       rubrik_ip = "${aws_instance.rubrik_cluster.0.private_ip}",
-      # rubrik_node_count = "${var.number_of_nodes}",
+      # rubrik_node_count = "${var.rubrik_node_count}",
       # ip_addrs          = "${aws_instance.rubrik_cluster.*.private_ip}",
       # rubrik_support_password       = "${var.rubrik_support_password}",
       # rubrik_admin_email            = "${var.rubrik_admin_email}",
@@ -110,19 +110,25 @@ resource "aws_security_group" "workload_instances" {
     security_groups = ["${aws_security_group.rubrik_cloud_cluster.id}"]
   }
 }
-
+resource "aws_secretsmanager_secret" "rubrik_private_key" {
+  name = "example"
+}
+resource "aws_secretsmanager_secret_version" "example" {
+  secret_id     = aws_secretsmanager_secret.example.id
+  secret_string = "example-string-to-protect"
+}
 ###############################
 # Create EC2 Instances in AWS #
 ###############################
 
 resource "aws_instance" "rubrik_cluster" {
-  count                  = var.number_of_nodes
+  count                  = var.rubrik_node_count
   instance_type          = local.rubrik_instance_type
   ami                    = local.rubrik_ami
   iam_instance_profile   = aws_iam_instance_profile.rubrik_ec2_profile.name
   vpc_security_group_ids = [aws_security_group.rubrik_cloud_cluster.id]
   subnet_id              = var.aws_subnet_id
-  key_name               = var.aws_public_key_name
+  key_name               = var.rubrik_key_name
   source_dest_check      = false
   tags = {
     Name = element(local.cluster_node_name, count.index)
