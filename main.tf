@@ -110,13 +110,6 @@ resource "aws_security_group" "workload_instances" {
     security_groups = ["${aws_security_group.rubrik_cloud_cluster.id}"]
   }
 }
-resource "aws_secretsmanager_secret" "rubrik_private_key" {
-  name = "example"
-}
-resource "aws_secretsmanager_secret_version" "example" {
-  secret_id     = aws_secretsmanager_secret.example.id
-  secret_string = "example-string-to-protect"
-}
 ###############################
 # Create EC2 Instances in AWS #
 ###############################
