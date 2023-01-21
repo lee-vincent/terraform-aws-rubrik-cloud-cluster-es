@@ -46,11 +46,11 @@ data "aws_ami" "amazon_linux2" {
 # next add a bastion spcific key and use user data and secrets manager agent to pull
 # the rubrik key onto the bastion
 resource "aws_instance" "bastion" {
-  ami           = data.aws_ami.amazon_linux2.image_id
-  instance_type = var.aws_instance_type
-  key_name      = aws_key_pair.rubrik.key_name
+  ami                    = data.aws_ami.amazon_linux2.image_id
+  instance_type          = var.aws_instance_type
+  key_name               = aws_key_pair.rubrik.key_name
   vpc_security_group_ids = [aws_security_group.workstation_bastion.id, module.rubrik_cloud_cluster.bastion_rubrik_security_group]
-  subnet_id = aws_subnet.workload.id
+  subnet_id              = aws_subnet.workload.id
   tags = {
     Name = "bastion"
   }
@@ -60,14 +60,14 @@ resource "aws_instance" "bastion" {
 module "rubrik_cloud_cluster" {
   # source                                   = "lee-vincent/rubrik-cloud-cluster-es/aws"
   # version                                  = "~> 1.2.6"
-  source                                   = "git::https://github.com/lee-vincent/terraform-aws-rubrik-cloud-cluster-es.git?ref=v8.0"
-  aws_region                               = var.aws_region
-  aws_subnet_id                            = aws_subnet.rubrik.id
-  rubrik_key_name                          = var.rubrik_key_name
-  aws_disable_api_termination              = false
-  rubrik_node_count                        = var.rubrik_node_count
-  bootstrap_cluster                        = true
-  force_destroy_s3_bucket                  = true
+  source                      = "git::https://github.com/lee-vincent/terraform-aws-rubrik-cloud-cluster-es.git?ref=v8.0"
+  aws_region                  = var.aws_region
+  aws_subnet_id               = aws_subnet.rubrik.id
+  rubrik_key_name             = var.rubrik_key_name
+  aws_disable_api_termination = false
+  rubrik_node_count           = var.rubrik_node_count
+  bootstrap_cluster           = true
+  force_destroy_s3_bucket     = true
 }
 resource "aws_vpc" "rubrik_vpc" {
   cidr_block = "10.150.0.0/16"
