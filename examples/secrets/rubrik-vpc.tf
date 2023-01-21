@@ -12,16 +12,18 @@ variable "rubrik_private_key" {
   description = "OpenSSH private key that will be added to secrets manager"
 }
 resource "aws_secretsmanager_secret" "rubrik_cloud_cluster" {
-  name        = var.rubrik_key_name
-  description = "OpenSSH private key used to bootstrap rubrik cloud cluster nodes"
+  name                    = var.rubrik_key_name
+  recovery_window_in_days = 0
+  description             = "OpenSSH private key used to bootstrap rubrik cloud cluster nodes"
 }
 resource "aws_secretsmanager_secret_version" "rubrik_private_key_value" {
   secret_id     = aws_secretsmanager_secret.rubrik_cloud_cluster.id
   secret_string = var.rubrik_private_key
 }
 resource "aws_secretsmanager_secret" "rubrik_cloud_cluster_pub" {
-  name        = "${var.rubrik_key_name}.pub"
-  description = "OpenSSH public key used to bootstrap rubrik cloud cluster nodes"
+  name                    = "${var.rubrik_key_name}.pub"
+  recovery_window_in_days = 0
+  description             = "OpenSSH public key used to bootstrap rubrik cloud cluster nodes"
 }
 resource "aws_secretsmanager_secret_version" "rubrik_public_key_value" {
   secret_id     = aws_secretsmanager_secret.rubrik_cloud_cluster_pub.id
