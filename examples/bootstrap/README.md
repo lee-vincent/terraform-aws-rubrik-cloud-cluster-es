@@ -1,6 +1,8 @@
 # Rubrik Cloud Cluster ES on AWS Deployment Example
 [![AHEAD](https://public-bucket-general.s3.amazonaws.com/AHEAD-logo-bluebackground-180x38px.png)](https://ahead.com)
 
+https://aws.amazon.com/blogs/security/how-to-use-aws-secrets-manager-securely-store-rotate-ssh-key-pairs/
+
 
 - Author: Vinnie Lee
 - Contact: vinnie.lee@ahead.com
