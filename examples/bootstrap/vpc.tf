@@ -49,7 +49,7 @@ resource "aws_instance" "bastion" {
   instance_type          = var.aws_instance_type
   key_name               = aws_key_pair.rubrik.key_name
   vpc_security_group_ids = [aws_security_group.workstation_bastion.id, module.rubrik_cloud_cluster.bastion_rubrik_security_group]
-  subnet_id              = aws_subnet.workload.id
+  subnet_id              = aws_subnet.public.id
   tags = {
     Name = "bastion"
   }
@@ -143,7 +143,7 @@ resource "aws_security_group" "workstation_bastion" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/32"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 resource "aws_route_table_association" "public" {

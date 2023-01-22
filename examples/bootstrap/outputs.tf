@@ -8,3 +8,6 @@ output "rubrik_ami" {
 output "rubrik_bucket" {
   value = module.rubrik_cloud_cluster.backup_bucket_name
 }
+output "bastion_ip" {
+  value = aws_instance.bastion.public_ip
+}
