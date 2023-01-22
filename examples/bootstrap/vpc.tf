@@ -1,5 +1,5 @@
 provider "aws" {
-  region  = var.aws_region
+  region = var.aws_region
 }
 # keys used by ec2 bastion to manage rubrik nodes
 resource "aws_secretsmanager_secret" "rubrik_cloud_cluster" {

@@ -91,14 +91,14 @@ resource "aws_security_group" "bastion_rubrik" {
     description = "allow https in between sg"
     from_port   = 443
     to_port     = 443
-    protocol    = "-1"
+    protocol    = "tcp"
     self        = true
   }
   ingress {
     description = "allow ssh in between sg"
     from_port   = 22
     to_port     = 22
-    protocol    = "-1"
+    protocol    = "tcp"
     self        = true
   }
   egress {
