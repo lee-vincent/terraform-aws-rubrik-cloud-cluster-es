@@ -48,12 +48,42 @@ resource "aws_instance" "bastion" {
   ami                    = data.aws_ami.amazon_linux2.image_id
   instance_type          = var.aws_instance_type
   key_name               = aws_key_pair.rubrik.key_name
+  # iam_instance_profile   = ssmrole
   vpc_security_group_ids = [aws_security_group.workstation_bastion.id, module.rubrik_cloud_cluster.bastion_rubrik_security_group]
   subnet_id              = aws_subnet.public.id
   tags = {
     Name = "bastion"
   }
   associate_public_ip_address = true
+  user_data = <<-EOF1
+    #!/bin/bash
+    # download update aws cli
+    # get instand  credentials?
+    # get the private key from secretsmanager
+    RUBRIK_IPS="${module.rubrik_cloud_cluster.rubrik_cloud_cluster_ip_addrs[*]}"
+    RUBRIK_IP_ADDRS="%{ for addr in ip_addrs ~}${addr}\n%{ endfor ~}"
+    RUBRIK_USER=${rubrik_user}
+    WORKLOAD_IP=${workload_ip}
+    SSH_KEY_FULL_FILE_PATH=${ssh_key_full_file_path}
+    RUBRIK_SUPPORT_PASSWORD='${rubrik_support_password}'
+
+    # variables needed for Rubrik Cloud Cluster ES bootstrap
+    RUBRIK_ADMIN_EMAIL=${rubrik_admin_email}
+    RUBRIK_PASS=${rubrik_pass}
+    RUBRIK_CLUSTER_NAME=${rubrik_cluster_name}
+    RUBRIK_DNS_NAMESERVERS=${rubrik_dns_nameservers}
+    RUBRIK_DNS_SEARCH_DOMAIN=${rubrik_dns_search_domain}
+    RUBRIK_NTP_SERVERS=${rubrik_ntp_servers}
+    RUBRIK_USE_CLOUD_STORAGE=${rubrik_use_cloud_storage}
+    RUBRIK_S3_BUCKET=${rubrik_s3_bucket}
+    RUBRIK_MANAGEMENT_GATEWAY=${rubrik_management_gateway}
+    RUBRIK_MANAGEMENT_SUBNET_MASK=${rubrik_management_subnet_mask}
+    RUBRIK_NODE_COUNT=${rubrik_node_count}
+
+
+    # Bootstrap the AWS Rubrik Cloud Cluster ES over SSH
+    # echo -e -n "$RUBRIK_ADMIN_EMAIL\n$RUBRIK_PASS\n$RUBRIK_PASS\n$RUBRIK_CLUSTER_NAME\n$RUBRIK_DNS_NAMESERVERS\n$RUBRIK_DNS_SEARCH_DOMAIN\n$RUBRIK_NTP_SERVERS\n$RUBRIK_USE_CLOUD_STORAGE\n$RUBRIK_S3_BUCKET\n$RUBRIK_MANAGEMENT_GATEWAY\n$RUBRIK_MANAGEMENT_SUBNET_MASK\n$RUBRIK_NODE_COUNT\n$RUBRIK_IP_ADDRS\n" | ssh -i "$SSH_KEY_FULL_FILE_PATH" -oStrictHostKeyChecking=no $RUBRIK_USER@$RUBRIK_IP cluster bootstrap
+  EOF1
 }
 # then create new security group for bastion to nodes communication
 module "rubrik_cloud_cluster" {
@@ -191,4 +221,42 @@ resource "aws_route_table" "rubrik_routetable_main" {
 resource "aws_main_route_table_association" "main" {
   vpc_id         = aws_vpc.rubrik_vpc.id
   route_table_id = aws_route_table.rubrik_routetable_main.id
+}
+resource "aws_iam_role" "ec2_secretsmanager_instance_role" {
+  name = "ec2-secretsmanager-instance-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "allow_secretsmanager_read" {
+  name = "AllowSecretsManagerRead"
+  role = aws_iam_role.ec2_secretsmanager_instance_role.id
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Sid" : "VisualEditor0",
+        "Effect" : "Allow",
+        "Action" : [
+          "secretsmanager:GetSecretValue"
+        ],
+        "Resource" : "${aws_secretsmanager_secret_version.rubrik_private_key_value.arn}"
+      }
+    ],
+  })
+}
+resource "aws_iam_instance_profile" "ec2_secretsmanager_profile" {
+  name = "ec2-secretsmanager-instance-profile"
+  role = aws_iam_role.ec2_secretsmanager_instance_role.name
 }
