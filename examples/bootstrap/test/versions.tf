@@ -15,7 +15,7 @@ terraform {
   }
 }
 provider "aws" {
-  region = "us-east-1"
+  region = var.aws_region
 }
 
 variable "ips" {
@@ -49,6 +49,7 @@ resource "aws_instance" "bastion" {
   instance_type        = "t3.micro"
   user_data            = <<-EOF1
     #!/bin/bash
+    yum install -y jq
     RUBRIK_IPS=(%{for ip in var.ips}"${ip}" %{endfor~})
     echo $${#RUBRIK_IPS[@]} > /home/ec2-user/array.length
     for ip in $${RUBRIK_IPS[@]}; do echo $ip >> /home/ec2-user/ips; done
@@ -59,14 +60,16 @@ resource "aws_instance" "bastion" {
     export AWS_ACCESS_KEY_ID="$(cat /home/ec2-user/creds | grep AccessKeyId | tr -d \"[:space:], | cut -d : -f 2)"
     export AWS_SECRET_ACCESS_KEY="$(cat /home/ec2-user/creds | grep SecretAccessKey | tr -d \"[:space:], | cut -d : -f 2)"
     export AWS_SESSION_TOKEN="$(cat /home/ec2-user/creds | grep Token | tr -d \"[:space:], | cut -d : -f 2)"
-    aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.rubrik_cloud_cluster.arn} --region us-east-1 > /home/ec2-user/rubrik-cloud-cluster
-
-  
-    
-
+    raw_key=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.rubrik_cloud_cluster.arn} --region ${var.aws_region} --query SecretString)
+    echo -e $raw_key | tr -d \" > /home/ec2-user/rubrik-cloud-cluster
+    chown ec2-user:ec2-user /home/ec2-user/rubrik-cloud-cluster
+    chmod 0400 /home/ec2-user/rubrik-cloud-cluster
   EOF1
 }
-
+variable "aws_region" {
+  type    = string
+  default = "us-east-1"
+}
 resource "aws_iam_role" "ec2_secretsmanager_instance_role" {
   name = "ec2-secretsmanager-instance-role"
   assume_role_policy = jsonencode({
