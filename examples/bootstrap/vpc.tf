@@ -44,47 +44,74 @@ data "aws_ami" "amazon_linux2" {
 }
 # next add a bastion spcific key and use user data and secrets manager agent to pull
 # the rubrik key onto the bastion
+
+# download update aws cli
+# get instand  credentials?
+# get the private key from secretsmanager
+# RUBRIK_IPS=("${module.rubrik_cloud_cluster.rubrik_cloud_cluster_ip_addrs[*]}")
+# RUBRIK_IP_ADDRS="%{for addr in ip_addrs~}${addr}\n%{endfor~}"
+# RUBRIK_USER=${rubrik_user}
+# WORKLOAD_IP=${workload_ip}
+# SSH_KEY_FULL_FILE_PATH=${ssh_key_full_file_path}
+# RUBRIK_SUPPORT_PASSWORD='${rubrik_support_password}'
+
+# variables needed for Rubrik Cloud Cluster ES bootstrap
+# RUBRIK_ADMIN_EMAIL=${rubrik_admin_email}
+# RUBRIK_PASS=${rubrik_pass}
+# RUBRIK_CLUSTER_NAME=${rubrik_cluster_name}
+# RUBRIK_DNS_NAMESERVERS=${rubrik_dns_nameservers}
+# RUBRIK_DNS_SEARCH_DOMAIN=${rubrik_dns_search_domain}
+# RUBRIK_NTP_SERVERS=${rubrik_ntp_servers}
+# RUBRIK_USE_CLOUD_STORAGE=${rubrik_use_cloud_storage}
+# RUBRIK_S3_BUCKET=${rubrik_s3_bucket}
+# RUBRIK_MANAGEMENT_GATEWAY=${rubrik_management_gateway}
+# RUBRIK_MANAGEMENT_SUBNET_MASK=${rubrik_management_subnet_mask}
+# RUBRIK_NODE_COUNT=${rubrik_node_count}
+
+
+# Bootstrap the AWS Rubrik Cloud Cluster ES over SSH
+# echo -e -n "$RUBRIK_ADMIN_EMAIL\n$RUBRIK_PASS\n$RUBRIK_PASS\n$RUBRIK_CLUSTER_NAME\n$RUBRIK_DNS_NAMESERVERS\n$RUBRIK_DNS_SEARCH_DOMAIN\n$RUBRIK_NTP_SERVERS\n$RUBRIK_USE_CLOUD_STORAGE\n$RUBRIK_S3_BUCKET\n$RUBRIK_MANAGEMENT_GATEWAY\n$RUBRIK_MANAGEMENT_SUBNET_MASK\n$RUBRIK_NODE_COUNT\n$RUBRIK_IP_ADDRS\n" | ssh -i "$SSH_KEY_FULL_FILE_PATH" -oStrictHostKeyChecking=no $RUBRIK_USER@$RUBRIK_IP cluster bootstrap
+# could use vpc endppoint for secretsmanager so dont have to use all out sg rule
 resource "aws_instance" "bastion" {
   ami                    = data.aws_ami.amazon_linux2.image_id
   instance_type          = var.aws_instance_type
   key_name               = aws_key_pair.rubrik.key_name
-  # iam_instance_profile   = ssmrole
-  vpc_security_group_ids = [aws_security_group.workstation_bastion.id, module.rubrik_cloud_cluster.bastion_rubrik_security_group]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_secretsmanager_profile.name
+  vpc_security_group_ids = [aws_security_group.bastion_secretsmanager_endpoint.id, aws_security_group.workstation_bastion.id, module.rubrik_cloud_cluster.bastion_rubrik_security_group]
   subnet_id              = aws_subnet.public.id
   tags = {
     Name = "bastion"
   }
   associate_public_ip_address = true
-  user_data = <<-EOF1
+  user_data                   = <<-EOF1
     #!/bin/bash
-    # download update aws cli
-    # get instand  credentials?
-    # get the private key from secretsmanager
-    RUBRIK_IPS=("${module.rubrik_cloud_cluster.rubrik_cloud_cluster_ip_addrs[*]}")
-    RUBRIK_IP_ADDRS="%{ for addr in ip_addrs ~}${addr}\n%{ endfor ~}"
-    RUBRIK_USER=${rubrik_user}
-    WORKLOAD_IP=${workload_ip}
-    SSH_KEY_FULL_FILE_PATH=${ssh_key_full_file_path}
-    RUBRIK_SUPPORT_PASSWORD='${rubrik_support_password}'
-
-    # variables needed for Rubrik Cloud Cluster ES bootstrap
-    RUBRIK_ADMIN_EMAIL=${rubrik_admin_email}
-    RUBRIK_PASS=${rubrik_pass}
-    RUBRIK_CLUSTER_NAME=${rubrik_cluster_name}
-    RUBRIK_DNS_NAMESERVERS=${rubrik_dns_nameservers}
-    RUBRIK_DNS_SEARCH_DOMAIN=${rubrik_dns_search_domain}
-    RUBRIK_NTP_SERVERS=${rubrik_ntp_servers}
-    RUBRIK_USE_CLOUD_STORAGE=${rubrik_use_cloud_storage}
-    RUBRIK_S3_BUCKET=${rubrik_s3_bucket}
-    RUBRIK_MANAGEMENT_GATEWAY=${rubrik_management_gateway}
-    RUBRIK_MANAGEMENT_SUBNET_MASK=${rubrik_management_subnet_mask}
-    RUBRIK_NODE_COUNT=${rubrik_node_count}
-
-
-    # Bootstrap the AWS Rubrik Cloud Cluster ES over SSH
-    # echo -e -n "$RUBRIK_ADMIN_EMAIL\n$RUBRIK_PASS\n$RUBRIK_PASS\n$RUBRIK_CLUSTER_NAME\n$RUBRIK_DNS_NAMESERVERS\n$RUBRIK_DNS_SEARCH_DOMAIN\n$RUBRIK_NTP_SERVERS\n$RUBRIK_USE_CLOUD_STORAGE\n$RUBRIK_S3_BUCKET\n$RUBRIK_MANAGEMENT_GATEWAY\n$RUBRIK_MANAGEMENT_SUBNET_MASK\n$RUBRIK_NODE_COUNT\n$RUBRIK_IP_ADDRS\n" | ssh -i "$SSH_KEY_FULL_FILE_PATH" -oStrictHostKeyChecking=no $RUBRIK_USER@$RUBRIK_IP cluster bootstrap
+    RUBRIK_IPS=(%{for ip in module.rubrik_cloud_cluster.rubrik_cloud_cluster_ip_addrs}"${ip}" %{endfor~})
+    echo $${#RUBRIK_IPS[@]} > /home/ec2-user/array.length
+    for ip in $${RUBRIK_IPS[@]}; do echo $ip >> /home/ec2-user/ips; done
+    curl "http://169.254.169.254/latest/meta-data/iam/security-credentials/$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/)" -o /home/ec2-user/creds
+    echo 'export AWS_ACCESS_KEY_ID="$(cat /home/ec2-user/creds | grep AccessKeyId | tr -d \"[:space:], | cut -d : -f 2)"' >> /home/ec2-user/.bashrc
+    echo 'export AWS_SECRET_ACCESS_KEY="$(cat /home/ec2-user/creds | grep SecretAccessKey | tr -d \"[:space:], | cut -d : -f 2)"' >> /home/ec2-user/.bashrc
+    echo 'export AWS_SESSION_TOKEN="$(cat /home/ec2-user/creds | grep Token | tr -d \"[:space:], | cut -d : -f 2)"' >> /home/ec2-user/.bashrc
+    export AWS_ACCESS_KEY_ID="$(cat /home/ec2-user/creds | grep AccessKeyId | tr -d \"[:space:], | cut -d : -f 2)"
+    export AWS_SECRET_ACCESS_KEY="$(cat /home/ec2-user/creds | grep SecretAccessKey | tr -d \"[:space:], | cut -d : -f 2)"
+    export AWS_SESSION_TOKEN="$(cat /home/ec2-user/creds | grep Token | tr -d \"[:space:], | cut -d : -f 2)"
+    raw_key=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.rubrik_cloud_cluster.arn} --region ${var.aws_region} --query SecretString)
+    echo -e $raw_key | tr -d \" > /home/ec2-user/.ssh/rubrik-cloud-cluster
+    chown ec2-user:ec2-user /home/ec2-user/.ssh/rubrik-cloud-cluster
+    chmod 0400 /home/ec2-user/.ssh/rubrik-cloud-cluster
   EOF1
 }
+resource "aws_vpc_endpoint" "secretsmanager" {
+  vpc_id              = aws_vpc.rubrik_vpc.id
+  service_name        = format("%s%s%s", "com.amazonaws.", var.aws_region, ".secretsmanager")
+  private_dns_enabled = true
+  security_group_ids  = [aws_security_group.bastion_secretsmanager_endpoint.id]
+  vpc_endpoint_type = "Interface"
+  tags = {
+    Name = format("%s%s", aws_vpc.rubrik_vpc.tags.Name, "-secretsmanagerendpoint")
+  }
+}
+
 # then create new security group for bastion to nodes communication
 module "rubrik_cloud_cluster" {
   # source                                   = "lee-vincent/rubrik-cloud-cluster-es/aws"
@@ -99,7 +126,8 @@ module "rubrik_cloud_cluster" {
   force_destroy_s3_bucket     = true
 }
 resource "aws_vpc" "rubrik_vpc" {
-  cidr_block = "10.150.0.0/16"
+  cidr_block           = "10.150.0.0/16"
+  enable_dns_hostnames = true
   tags = {
     Name = format("%s%s%s", var.aws_prefix, var.aws_region, "-vpc")
   }
@@ -176,6 +204,28 @@ resource "aws_security_group" "workstation_bastion" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+resource "aws_security_group" "bastion_secretsmanager_endpoint" {
+  name        = "bastion-secretsmanager-endpoint-sg"
+  description = "Allow all to secretsmanager vpc endpoint"
+  vpc_id      = aws_vpc.rubrik_vpc.id
+  tags = {
+    Name = format("%s%s", aws_vpc.rubrik_vpc.tags.Name, "-bastion-secretsmanager-endpoint-sg")
+  }
+  ingress {
+    description = "allow all in between sg"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    self = true
+  }
+    egress {
+    description = "allow all out between sg"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    self = true
+  }
+}
 resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.rubrik_routetable_public.id
@@ -238,7 +288,6 @@ resource "aws_iam_role" "ec2_secretsmanager_instance_role" {
     ]
   })
 }
-
 resource "aws_iam_role_policy" "allow_secretsmanager_read" {
   name = "AllowSecretsManagerRead"
   role = aws_iam_role.ec2_secretsmanager_instance_role.id
