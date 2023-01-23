@@ -60,7 +60,7 @@ resource "aws_instance" "bastion" {
     # download update aws cli
     # get instand  credentials?
     # get the private key from secretsmanager
-    RUBRIK_IPS="${module.rubrik_cloud_cluster.rubrik_cloud_cluster_ip_addrs[*]}"
+    RUBRIK_IPS=("${module.rubrik_cloud_cluster.rubrik_cloud_cluster_ip_addrs[*]}")
     RUBRIK_IP_ADDRS="%{ for addr in ip_addrs ~}${addr}\n%{ endfor ~}"
     RUBRIK_USER=${rubrik_user}
     WORKLOAD_IP=${workload_ip}
