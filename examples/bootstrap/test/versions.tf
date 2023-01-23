@@ -61,9 +61,9 @@ resource "aws_instance" "bastion" {
     export AWS_SECRET_ACCESS_KEY="$(cat /home/ec2-user/creds | grep SecretAccessKey | tr -d \"[:space:], | cut -d : -f 2)"
     export AWS_SESSION_TOKEN="$(cat /home/ec2-user/creds | grep Token | tr -d \"[:space:], | cut -d : -f 2)"
     raw_key=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.rubrik_cloud_cluster.arn} --region ${var.aws_region} --query SecretString)
-    echo -e $raw_key | tr -d \" > /home/ec2-user/rubrik-cloud-cluster
-    chown ec2-user:ec2-user /home/ec2-user/rubrik-cloud-cluster
-    chmod 0400 /home/ec2-user/rubrik-cloud-cluster
+    echo -e $raw_key | tr -d \" > /home/ec2-user/.ssh/rubrik-cloud-cluster
+    chown ec2-user:ec2-user /home/ec2-user/.ssh/rubrik-cloud-cluster
+    chmod 0400 /home/ec2-user/.ssh/rubrik-cloud-cluster
   EOF1
 }
 variable "aws_region" {
