@@ -106,7 +106,7 @@ resource "aws_vpc_endpoint" "secretsmanager" {
   service_name        = format("%s%s%s", "com.amazonaws.", var.aws_region, ".secretsmanager")
   private_dns_enabled = true
   security_group_ids  = [aws_security_group.bastion_secretsmanager_endpoint.id]
-  vpc_endpoint_type = "Interface"
+  vpc_endpoint_type   = "Interface"
   tags = {
     Name = format("%s%s", aws_vpc.rubrik_vpc.tags.Name, "-secretsmanagerendpoint")
   }
@@ -216,14 +216,14 @@ resource "aws_security_group" "bastion_secretsmanager_endpoint" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    self = true
+    self        = true
   }
-    egress {
+  egress {
     description = "allow all out between sg"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    self = true
+    self        = true
   }
 }
 resource "aws_route_table_association" "public" {
