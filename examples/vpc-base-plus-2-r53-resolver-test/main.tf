@@ -22,12 +22,6 @@ variable "aws_zone" {
   type    = string
   default = "a"
 }
-variable "rubrik_key_name" {
-}
-variable "rubrik_private_key" {
-}
-variable "rubrik_public_key" {
-}
 provider "aws" {
   region = var.aws_region
 }
@@ -56,6 +50,17 @@ resource "aws_instance" "bastion1" {
 
 }
 resource "aws_instance" "bastion2" {
+  lifecycle {
+    create_before_destroy = true
+  }
+  key_name                    = "bilh-aws-demo-master-key"
+  ami                         = data.aws_ami.amazon_linux2.image_id
+  vpc_security_group_ids      = [aws_security_group.workstation_bastion.id]
+  subnet_id                   = aws_subnet.public2.id
+  instance_type               = "t3.micro"
+  associate_public_ip_address = true
+}
+resource "aws_instance" "bastion3" {
   lifecycle {
     create_before_destroy = true
   }
@@ -122,5 +127,19 @@ resource "aws_security_group" "workstation_bastion" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    description = "allow all in between sg"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    self        = true
+  }
+  egress {
+    description = "allow all out between sg"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    self        = true
   }
 }
